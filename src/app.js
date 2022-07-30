@@ -127,4 +127,61 @@ app.post('/jobs/:job_id/pay', getProfile, async (req, res) =>{
 
 
 
+app.post('/balances/deposit/:userId', getProfile, async (req, res) =>{
+    const {Job, Contract, Profile} = req.app.get('models')
+    const {userId} = req.params;
+    const { amount } = req.body;
+
+    // amount check if number/float
+    try {
+
+        const t = await sequelize.transaction(async(t) => {
+            const client = await Profile.findOne({where: {
+                id: userId,
+                type: 'client'
+              }}, {lock: true, transaction: t})
+              
+            if (!client ) {
+                console.log('Client does not exist')
+                return res.status(404).end()
+            }  
+            const jobSum =  await Job.sum('price', {
+                where: {
+                    paid: {
+                        [Op.not]: true
+                    }
+                },
+                include: [
+                  {
+                    model: Contract,
+                    required: true,
+                    attributes: [],
+                    where: {
+                        status: {
+                            [Op.not]: 'terminated'
+                        }, 
+                      ClientId: userId,
+                    },
+                  },
+                ],
+              }, {lock: true, transaction: t});
+
+              if (jobSum &&  parseFloat(amount) <= jobSum * 0.25 ) { //ok
+                client.balance = (parseFloat(amount) + parseFloat(client.balance)).toFixed(2);
+                await client.save ({ transaction: t})
+              }
+              else /* (!jobSum) */{
+                //no
+                console.log('Amount is too much')
+                return res.status(404).end()
+              }            
+          })
+          res.json({message: 'money is transfered'})
+      } catch (error) {
+        return res.status(404).end()
+    
+      }
+
+})
+
 module.exports = app;
