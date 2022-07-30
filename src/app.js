@@ -77,6 +77,54 @@ app.get('/jobs/unpaid', getProfile ,async (req, res) =>{
     res.json(jobs)
 })
 
+app.post('/jobs/:job_id/pay', getProfile, async (req, res) =>{
+    const {Job, Contract, Profile} = req.app.get('models')
+    const {job_id} = req.params;
+
+    try {
+        const t = await sequelize.transaction(async(t) => {
+            const job = await Job.findByPk(job_id,
+                                        {include: [{ model: Contract, required: true, attributes: ['ContractorId', 'ClientId']}]}, 
+                                        {lock: true, transaction: t})
+
+                const decResult = await Profile.decrement('balance',
+                                {
+                                    by: job.price,
+                                    where: {
+                                        id: job.Contract.ClientId,
+                                        balance: { [Op.gte]: job.price }
+                                    },
+                                    transaction: t,
+                                });
+                  if (decResult && decResult[0][1] === 0) { 
+                    // it is ok, but unsufficent balance
+                    console.log(' it is ok, but unsufficent balance');
+                    return res.status(505).end()
+
+                    throw Error('unsufficent balance')
+                  }
+                  if (decResult && decResult[0][1] === 1) {
+                    // it is ok, and increment can be done
+                    console.log('it is ok, and increment can be done')
+                    const incResult = await Profile.increment('balance',
+                                        {
+                                            by: job.price,
+                                            where: { id: job.Contract.ContractorId},
+                                            transaction: t
+                                        });
+                  }
+                  
+
+        })
+      } catch (error) {
+        console.log('--->',error)
+        return res.status(404).end()
+    
+      }
+      res.json({message: 'money is transfered'})
+
+})
+
 
 
 module.exports = app;
