@@ -43,9 +43,38 @@ app.get('/contracts', getProfile ,async (req, res) =>{
             ContractorId: userId,
           },
         ],
+        status: { [Op.ne]: 'terminated' },
       }});
     if(!contract) return res.status(404).end()
     res.json(contract)
+})
+
+app.get('/jobs/unpaid', getProfile ,async (req, res) =>{
+    const {Job, Contract} = req.app.get('models')
+    const userId = req.profile.id;
+
+    const jobs = await Job.findAll({where: {
+        paid: {
+            [Op.not]: true
+        }
+      },
+      include: [
+        {
+            model: Contract,
+            required: true,
+            attributes: [],
+            where: {
+                [Op.or]: [
+                    {ClientId: userId},
+                    {ContractorId: userId}
+                ],
+                status: 'in_progress',
+            },
+        },
+        ]});
+
+    if(!jobs) return res.status(404).end()
+    res.json(jobs)
 })
 
 
