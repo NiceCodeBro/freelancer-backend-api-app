@@ -5,4 +5,8 @@ async function getContractBelogsToProfile(clientOrContractorId, contractId) {
   return await ContractAccess.getContractBelogsToProfile(clientOrContractorId, contractId);
 }
 
-module.exports = {getContractBelogsToProfile}
+
+async function getAllContractsBelongsToProfile(clientOrContractorId) {
+  return await ContractAccess.getAllContractsBelongsToProfile(clientOrContractorId);
+}
+module.exports = {getContractBelogsToProfile, getAllContractsBelongsToProfile}

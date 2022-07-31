@@ -5,6 +5,12 @@ const sequelize = new Sequelize({
   storage: './database.sqlite3'
 });
 
+const contractStatus = {
+  NEW: 'new',
+  IN_PROGRESS: 'in_progress',
+  TERMINATED: 'terminated'
+}
+
 class Profile extends Sequelize.Model {}
 Profile.init(
   {
@@ -41,7 +47,7 @@ Contract.init(
       allowNull: false
     },
     status:{
-      type: Sequelize.ENUM('new','in_progress','terminated')
+      type: Sequelize.ENUM(contractStatus.NEW, contractStatus.IN_PROGRESS, contractStatus.TERMINATED)
     }
   },
   {
@@ -98,5 +104,6 @@ module.exports = {
   Contract,
   Job,
   profileFKs,
-  profileTypes
+  profileTypes,
+  contractStatus
 };
