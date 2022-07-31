@@ -1,8 +1,8 @@
 
 const {ContractAccess} = require('../dataLayer/contractAccess')
 
-async function getContractBelogsToProfile(clientOrContractorId, profileId) {
-  return await ContractAccess.getContractBelogsToProfile(clientOrContractorId, profileId);
+async function getContractBelogsToProfile(clientOrContractorId, contractId) {
+  return await ContractAccess.getContractBelogsToProfile(clientOrContractorId, contractId);
 }
 
 module.exports = {getContractBelogsToProfile}

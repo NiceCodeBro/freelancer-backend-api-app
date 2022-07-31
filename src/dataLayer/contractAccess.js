@@ -3,9 +3,9 @@ const { profileFKs, Contract } = require('../model');
 const { Op } = require('sequelize');
 
 class ContractAccess {
-  static async getContractBelogsToProfile(clientOrContractorId, profileId) {
+  static async getContractBelogsToProfile(clientOrContractorId, contractId) {
     const where = {
-      id: profileId,
+      id: contractId,
       [Op.or]: [ { [profileFKs.CLIENT]: clientOrContractorId }, { [profileFKs.CONTRACTOR]: clientOrContractorId } ]
     };
     const attributes =  { exclude: ['createdAt', 'updatedAt']};
