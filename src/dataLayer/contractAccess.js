@@ -19,7 +19,9 @@ class ContractAccess {
       [Op.or]: [ { [profileFKs.CLIENT]: clientOrContractorId },{ [profileFKs.CONTRACTOR]: clientOrContractorId }],
       status: { [Op.ne]: contractStatus.TERMINATED },
     }
-    const contract = await Contract.findAll({where});
+    const attributes =  { exclude: ['createdAt', 'updatedAt']};
+
+    const contract = await Contract.findAll({where, attributes});
     return contract;
   }
 }
