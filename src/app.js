@@ -3,7 +3,7 @@ const bodyParser = require('body-parser');
 const {sequelize} = require('./model')
 const {getProfile} = require('./middleware/getProfile')
 const {getContractBelogsToProfile, getAllContractsBelongsToProfile} = require('./bussinesLogic/contracts')
-const {getUnpaidActiveJobs} = require('./bussinesLogic/jobs')
+const {getUnpaidActiveJobs, payForJob} = require('./bussinesLogic/jobs')
 const app = express();
 app.use(bodyParser.json());
 app.set('sequelize', sequelize)
@@ -56,52 +56,20 @@ app.get('/jobs/unpaid', getProfile, async (req, res) =>{
   }     
 })
 
+/**
+ * Pay for a job, a client can only pay if his balance >= the amount to pay. 
+ * The amount should be moved from the client's balance to the contractor balance.
+ */
 app.post('/jobs/:job_id/pay', getProfile, async (req, res) =>{
-    const {Job, Contract, Profile} = req.app.get('models')
     const {job_id} = req.params;
-
+    // check for job id, if not exist return 404
     try {
-        const t = await sequelize.transaction(async(t) => {
-            const job = await Job.findByPk(job_id,
-                                        {include: [{ model: Contract, required: true, attributes: ['ContractorId', 'ClientId']}]}, 
-                                        {lock: true, transaction: t})
-
-                const decResult = await Profile.decrement('balance',
-                                {
-                                    by: job.price,
-                                    where: {
-                                        id: job.Contract.ClientId,
-                                        balance: { [Op.gte]: job.price }
-                                    },
-                                    transaction: t,
-                                });
-                  if (decResult && decResult[0][1] === 0) { 
-                    // it is ok, but unsufficent balance
-                    console.log(' it is ok, but unsufficent balance');
-                    return res.status(505).end()
-
-                    throw Error('unsufficent balance')
-                  }
-                  if (decResult && decResult[0][1] === 1) {
-                    // it is ok, and increment can be done
-                    console.log('it is ok, and increment can be done')
-                    const incResult = await Profile.increment('balance',
-                                        {
-                                            by: job.price,
-                                            where: { id: job.Contract.ContractorId},
-                                            transaction: t
-                                        });
-                  }
-                  
-
-        })
+        await payForJob(job_id);
+        res.status(200).end();
       } catch (error) {
-        console.log('--->',error)
-        return res.status(404).end()
-    
-      }
-      res.json({message: 'money is transfered'})
-
+        if (error.message === 'Insufficent balance') return res.status(422).end(); //Unprocessable Entity
+        return res.status(500).end();
+    }
 })
 
 

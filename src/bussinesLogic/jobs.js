@@ -5,5 +5,8 @@ async function getUnpaidActiveJobs(clientOrContractorId) {
   return await JobAccess.getUnpaidActiveJobs(clientOrContractorId);
 }
 
+async function payForJob(jobId) {
+  return await JobAccess.payForJob(jobId);
+}
 
-module.exports = {getUnpaidActiveJobs}
+module.exports = {getUnpaidActiveJobs, payForJob}

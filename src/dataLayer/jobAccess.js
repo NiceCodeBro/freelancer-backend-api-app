@@ -1,6 +1,8 @@
 
 const { profileFKs, Job, Contract, contractStatus } = require('../model');
 const { Op } = require('sequelize');
+const {sequelize} = require('../model')
+const {ProfileAccess} = require('./profileAccess')
 
 class JobAccess {
   static async getUnpaidActiveJobs(clientOrContractorId) {
@@ -13,6 +15,25 @@ class JobAccess {
     const attributes =  { exclude: ['createdAt', 'updatedAt']};
 
     return await Job.findAll({where, include, attributes });
+  }
+
+  static async payForJob(jobId) {
+    await sequelize.transaction(async(t) => {
+      const job = await JobAccess.getUnpaidJob(jobId, t);
+      const decResult = await ProfileAccess.decrementBalance(job.price, job.Contract.ClientId, t);
+      if (decResult) { // it is ok, and increment can be done
+        await ProfileAccess.incrementBalance(job.price, job.Contract.ContractorId, t)
+      } else {
+        throw Error('Insufficent balance')
+      }
+    })
+  }
+
+  static async getUnpaidJob(jobId, transactionObject) {
+    const contractAttributes = [profileFKs.CONTRACTOR, profileFKs.CLIENT];
+    const include = [{ model: Contract, required: true, attributes: contractAttributes}];
+    const transaction = {lock: true, transaction: transactionObject};
+    return await Job.findByPk(jobId, {include}, transaction)
   }
 }
 
