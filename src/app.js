@@ -3,6 +3,7 @@ const bodyParser = require('body-parser');
 const {sequelize} = require('./model')
 const {getProfile} = require('./middleware/getProfile')
 const {getContractBelogsToProfile, getAllContractsBelongsToProfile} = require('./bussinesLogic/contracts')
+const {getUnpaidActiveJobs} = require('./bussinesLogic/jobs')
 const app = express();
 app.use(bodyParser.json());
 app.set('sequelize', sequelize)
@@ -40,32 +41,19 @@ app.get('/contracts', getProfile, async (req, res) =>{
     }
 })
 
-app.get('/jobs/unpaid', getProfile ,async (req, res) =>{
-    const {Job, Contract} = req.app.get('models')
-    const userId = req.profile.id;
-
-    const jobs = await Job.findAll({where: {
-        paid: {
-            [Op.not]: true
-        }
-      },
-      include: [
-        {
-            model: Contract,
-            required: true,
-            attributes: [],
-            where: {
-                [Op.or]: [
-                    {ClientId: userId},
-                    {ContractorId: userId}
-                ],
-                status: 'in_progress',
-            },
-        },
-        ]});
-
-    if(!jobs) return res.status(404).end()
-    res.json(jobs)
+/**
+ * Get all unpaid jobs for a user (either a client or contractor), for active contracts only 
+ * @returns unpaid jobs by profile id
+ */
+app.get('/jobs/unpaid', getProfile, async (req, res) =>{
+  const profileId = req.profile.id;
+  try {
+    const unpaidJobs = await getUnpaidActiveJobs(profileId);
+    if(!unpaidJobs) return res.status(404).end()
+    res.json(unpaidJobs)
+  } catch(error) {
+    return res.status(500).end();
+  }     
 })
 
 app.post('/jobs/:job_id/pay', getProfile, async (req, res) =>{
