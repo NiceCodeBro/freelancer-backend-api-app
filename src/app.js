@@ -221,4 +221,51 @@ app.get('/admin/best-profession', getProfile ,async (req, res) =>{
     }
 })
 
+app.get('/admin/best-clients', getProfile ,async (req, res) =>{
+    const {Contract, Job, Profile} = req.app.get('models')
+    const startedDate = req.query.start; //new Date("2020-08-15T19:12:26.737Z");
+    const endDate = req.query.end; //  new Date("2020-08-30T23:11:26.737Z");
+    const limit = req.query.limit || 2
+    try {
+        const bestClients = await Job.findAll({
+            group: "Contract.Client.id",
+            limit,
+            attributes: [[sequelize.fn('sum', sequelize.col('price')), 'total']],
+            order: [[sequelize.literal('total'), 'DESC']],
+            where: { paid: true, paymentDate: {
+                [Op.between] : [startedDate , endDate]
+            } },
+            include: [{
+              model: Contract,
+              required: true,
+              where: {},
+              attributes: { exclude: ['id', 'terms', 'status', 'createdAt', 'updatedAt', 'ClientId']},
+              include: [{
+                model: Profile,
+                as: 'Client',
+                required: true,
+                attributes: ['firstName', 'lastName', 'id']
+              }]
+            }]
+          })
+          let result;
+          if (bestClients && bestClients.length > 0) {
+            result = bestClients.map((client) => {
+                return {
+                    id: client.Contract.Client.id,
+                    fullName: client.Contract.Client.firstName + ' ' + client.Contract.Client.lastName,
+                    paid: client.dataValues.total
+                }
+            })
+          }
+        if (bestClients && bestClients.length > 0) {
+            res.json(result)
+        }
+        return res.status(404).end()
+    }catch(error) {
+        console.log('Error', error)
+        return res.status(404).end()
+    }
+})
+
 module.exports = app;
