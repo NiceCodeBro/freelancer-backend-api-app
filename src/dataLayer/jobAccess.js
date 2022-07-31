@@ -10,7 +10,9 @@ class JobAccess {
       status: contractStatus.IN_PROGRESS,
     };
     const include = [{ model: Contract, required: true, attributes: [], where: whereContract}];
-    return await Job.findAll({where, include });
+    const attributes =  { exclude: ['createdAt', 'updatedAt']};
+
+    return await Job.findAll({where, include, attributes });
   }
 }
 
