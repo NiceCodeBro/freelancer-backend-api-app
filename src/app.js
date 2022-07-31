@@ -19,12 +19,9 @@ const { Op } = require('sequelize');
     try {
         const contract = await getContractBelogsToProfile(profileId, id);
         if(!contract) return res.status(404).end();
-        res.json({
-            status: 'success',
-            data: contract
-        })
+        res.json(contract)
     } catch(error) {
-        return res.status(404).end();
+        return res.status(500).end();
     }
 })
 
