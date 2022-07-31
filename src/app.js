@@ -184,4 +184,41 @@ app.post('/balances/deposit/:userId', getProfile, async (req, res) =>{
 
 })
 
+app.get('/admin/best-profession', getProfile ,async (req, res) =>{
+    const {Contract, Job, Profile} = req.app.get('models')
+    const startedDate = req.query.start; //new Date("2020-08-15T19:12:26.737Z");
+    const endDate = req.query.end; //  new Date("2020-08-30T23:11:26.737Z");
+
+    try {
+        const bestProfessions = await Job.findAll({
+            group: "Contract.Contractor.profession",
+            attributes: ['Contract.Contractor.profession', [sequelize.fn('sum', sequelize.col('price')), 'total'], 'paymentDate'],
+            order: [[sequelize.literal('total'), 'DESC']],
+            where: { paid: true, paymentDate: {
+                [Op.between] : [startedDate , endDate ]
+            } },
+            include: [{
+              model: Contract,
+              required: true,
+              where: {},
+              attributes: { exclude: ['id', 'terms', 'status', 'createdAt', 'updatedAt', 'ClientId']},
+              include: [{
+                model: Profile,
+                as: 'Contractor',
+                required: true,
+                attributes: ['profession']
+              }]
+            }]
+          })
+          console.log(JSON.stringify(bestProfessions, null, 2))
+        if (bestProfessions && bestProfessions.length > 0) {
+            res.json({'best-profession': bestProfessions[0].Contract.Contractor.profession})
+        }
+        return res.status(404).end()
+    }catch(error) {
+        console.log('Error', error)
+        return res.status(404).end()
+    }
+})
+
 module.exports = app;
