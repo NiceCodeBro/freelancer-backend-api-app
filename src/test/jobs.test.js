@@ -90,3 +90,65 @@ describe("Jobs /jobs/unpaid", () => {
     expect(unpaidJobs.status).toBe(500)
   });
 })
+
+describe("Jobs /jobs/:job_id/pay", () => {
+  beforeEach(async () => {
+    await Profile.sync({ force: true });
+    await Contract.sync({ force: true });
+    await Job.sync({ force: true });
+    await fillTheDb();
+  });
+
+  afterEach(async () => { });
+
+  it('should throw Unauthorized Exception on missing profile id', async () => {
+    // given
+
+    // when
+    const unpaidJobs = await supertest(app).post('/jobs/4/pay');
+
+    // then
+    expect(unpaidJobs.status).toBe(401)
+  });
+
+  it('should throw Unauthorized Exception on incompatible profile id', async () => {
+    // given
+
+    // when
+    const unpaidJobs = await supertest(app).post('/jobs/4/pay').set('profile_id', '10');
+
+    // then
+    expect(unpaidJobs.status).toBe(401)
+  });
+
+  it('should return correct unpaid jobs object if everything passed truly', async () => {
+    // given
+    const clientBalanceBeforePayment = await Profile.findByPk(2);
+    const contractorBalanceBeforePayment = await Profile.findByPk(6);
+    const jobId = 1;
+    const job = await Job.findByPk(jobId);
+
+    // when
+    const unpaidJobs = await supertest(app).post(`/jobs/${jobId}/pay`).set('profile_id', '2');
+
+    // then
+    const clientBalanceAfterPayment = await Profile.findByPk(2);
+    const contractorBalanceAfterPayment = await Profile.findByPk(6);
+
+    
+    expect(unpaidJobs.status).toBe(200)
+    expect(clientBalanceBeforePayment.balance - job.price).toBe(clientBalanceAfterPayment.balance)
+    expect(contractorBalanceBeforePayment.balance + job.price).toBe(contractorBalanceAfterPayment.balance)
+  });
+
+  it('should return status code 500 if there is a problem with database', async () => {
+    // given
+    await Job.drop();
+
+    // when
+    const unpaidJobs = await supertest(app).post('/jobs/4/pay').set('profile_id', '6');
+
+    // then
+    expect(unpaidJobs.status).toBe(500)
+  });
+})
