@@ -118,14 +118,12 @@ app.post('/balances/deposit/:userId', getProfile, async (req, res) =>{
                 await client.save ({ transaction: t})
               }
               else /* (!jobSum) */{
-                //no
-                console.log('Amount is too much')
-                return res.status(404).end()
+                return res.status(422).end()
               }            
           })
-          res.json({message: 'money is transfered'})
-      } catch (error) {
-        return res.status(404).end()
+          res.status(200).end();
+        } catch (error) {
+          return res.status(404).end()
     
       }
 
