@@ -1,5 +1,5 @@
 
-const { Profile } = require('../model');
+const { Profile, Job, Contract, profileTypes } = require('../model');
 const { Op } = require('sequelize');
 const {sequelize} = require('../model')
 
@@ -41,6 +41,19 @@ class ProfileAccess {
       if (!jobSum || !isAmountUnderTheThreshold(amount, jobSum)) throw Error('Threshold problem');
       else await ProfileAccess.updateClientBalance(client, amount, t);
     })
+  }
+
+  static async getBestProfession(startedDate, endDate) {
+    const group =  "Contract.Contractor.profession";
+    const attributes = [[sequelize.fn('sum', sequelize.col('price')), 'total'], 'paymentDate'];
+    const where = { paid: true, paymentDate: { [Op.between] : [startedDate , endDate ]} };
+    const order = [[sequelize.literal('total'), 'DESC']];
+    const includeContract = [{ model: Profile, as: profileTypes.CONTRACTOR, required: true, attributes: ['profession']}]
+    const include = [{model: Contract, required: true, where: {}, include: includeContract}];
+
+    const bestProfessions = await Job.findAll({ group, attributes, order, where, include });
+    if (bestProfessions && bestProfessions.length > 0) return bestProfessions[0].Contract.Contractor.profession;
+    throw Error('Best profession could not found')
   }
 }
 
