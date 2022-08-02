@@ -4,11 +4,13 @@ const {sequelize} = require('./model')
 const {getProfile} = require('./middleware/getProfile')
 const {getContractBelogsToProfile, getAllContractsBelongsToProfile} = require('./bussinesLogic/contracts')
 const {getUnpaidActiveJobs, payForJob} = require('./bussinesLogic/jobs')
+const {depositMoneyToClient} = require('./bussinesLogic/profiles')
+const { Op } = require('sequelize');
+
 const app = express();
 app.use(bodyParser.json());
 app.set('sequelize', sequelize)
 app.set('models', sequelize.models)
-const { Op } = require('sequelize');
 
 /**
  * Returns the contract only if it belongs to the profile calling
@@ -73,60 +75,21 @@ app.post('/jobs/:job_id/pay', getProfile, async (req, res) =>{
 })
 
 
-
+/**
+ *  Deposits money into the the the balance of a client, a client can't deposit 
+ * more than 25% his total of jobs to pay. (at the deposit moment)
+ */
 app.post('/balances/deposit/:userId', getProfile, async (req, res) =>{
-    const {Job, Contract, Profile} = req.app.get('models')
     const {userId} = req.params;
-    const { amount } = req.body;
-
-    // amount check if number/float
+    const {amount} = req.body;
     try {
-
-        const t = await sequelize.transaction(async(t) => {
-            const client = await Profile.findOne({where: {
-                id: userId,
-                type: 'client'
-              }}, {lock: true, transaction: t})
-              
-            if (!client ) {
-                console.log('Client does not exist')
-                return res.status(404).end()
-            }  
-            const jobSum =  await Job.sum('price', {
-                where: {
-                    paid: {
-                        [Op.not]: true
-                    }
-                },
-                include: [
-                  {
-                    model: Contract,
-                    required: true,
-                    attributes: [],
-                    where: {
-                        status: {
-                            [Op.not]: 'terminated'
-                        }, 
-                      ClientId: userId,
-                    },
-                  },
-                ],
-              }, {lock: true, transaction: t});
-
-              if (jobSum &&  parseFloat(amount) <= jobSum * 0.25 ) { //ok
-                client.balance = (parseFloat(amount) + parseFloat(client.balance)).toFixed(2);
-                await client.save ({ transaction: t})
-              }
-              else /* (!jobSum) */{
-                return res.status(422).end()
-              }            
-          })
-          res.status(200).end();
-        } catch (error) {
-          return res.status(404).end()
-    
-      }
-
+      await depositMoneyToClient(userId, amount);
+      res.status(200).end();
+    } catch (error) {
+      if (error.message === 'Client does not exist') return res.status(404).end();
+      else if (error.message === 'Threshold problem') return res.status(422).end();
+      else return res.status(404).end();
+    }
 })
 
 app.get('/admin/best-profession', getProfile ,async (req, res) =>{

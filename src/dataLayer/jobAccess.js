@@ -28,6 +28,12 @@ class JobAccess {
       }
     })
   }
+  static async getTotalPriceForUnpaidJobs(clientId, transactionObject) {
+    const where =  { paid: { [Op.not]: true } };
+    const whereContract = {status: { [Op.not]: contractStatus.TERMINATED}, [profileFKs.CLIENT]: clientId};
+    const include = [{ model: Contract, required: true, attributes: [], where: whereContract }];
+    return await Job.sum('price', {where, include }, {lock: true, transaction: transactionObject});
+  }
 
   static async getUnpaidJob(jobId, transactionObject) {
     const contractAttributes = [profileFKs.CONTRACTOR, profileFKs.CLIENT];
