@@ -253,8 +253,7 @@ const fillTheDb2 = async () => {
        paid:true,
        paymentDate:'2020-08-14T23:11:26.737Z',
        ContractId: 3,
-     }),
-     
+     })
    ]);
 }
 describe("Profiles '/balances/deposit/:userId", () => {
@@ -271,20 +270,20 @@ describe("Profiles '/balances/deposit/:userId", () => {
     // given
 
     // when
-    const unpaidJobs = await supertest(app).post('/balances/deposit/:userId');
+    const result = await supertest(app).post('/balances/deposit/:userId');
 
     // then
-    expect(unpaidJobs.status).toBe(401)
+    expect(result.status).toBe(401)
   });
 
   it('should throw Unauthorized Exception on incompatible profile id', async () => {
     // given
 
     // when
-    const unpaidJobs = await supertest(app).post('/balances/deposit/:userId').set('profile_id', '10');
+    const result = await supertest(app).post('/balances/deposit/:userId').set('profile_id', '10');
 
     // then
-    expect(unpaidJobs.status).toBe(401)
+    expect(result.status).toBe(401)
   });
 
   it('should be able to deposit the amount if it is less than 25% his total of jobs to pay', async () => {
@@ -293,11 +292,11 @@ describe("Profiles '/balances/deposit/:userId", () => {
     const amount = 20;
 
     // when
-    const unpaidJobs = await supertest(app).post('/balances/deposit/2').set('profile_id', '2').send({amount});
+    const result = await supertest(app).post('/balances/deposit/2').set('profile_id', '2').send({amount});
 
     // then 
     const clientAfterPayment = await Profile.findByPk(2);
-    expect(unpaidJobs.status).toBe(200)
+    expect(result.status).toBe(200)
     expect(clientBeforePayment.balance + amount).toBe(clientAfterPayment.balance)
   });
 
@@ -307,17 +306,14 @@ describe("Profiles '/balances/deposit/:userId", () => {
     const amount = 100; // amount which is more than 25% of job sum
 
     // when
-    const unpaidJobs = await supertest(app).post('/balances/deposit/2').set('profile_id', '2').send({amount});
+    const result = await supertest(app).post('/balances/deposit/2').set('profile_id', '2').send({amount});
 
     // then 
     const clientAfterPayment = await Profile.findByPk(2);
-    expect(unpaidJobs.status).toBe(422)
+    expect(result.status).toBe(422)
     expect(clientBeforePayment.balance).toBe(clientAfterPayment.balance)
   });
-
 })
-
-
 
 describe("Profiles /admin/best-profession", () => {
   beforeEach(async () => {
@@ -333,20 +329,20 @@ describe("Profiles /admin/best-profession", () => {
     // given
 
     // when
-    const unpaidJobs = await supertest(app).get('/admin/best-profession');
+    const bestProfession = await supertest(app).get('/admin/best-profession');
 
     // then
-    expect(unpaidJobs.status).toBe(401)
+    expect(bestProfession.status).toBe(401)
   });
 
   it('should throw Unauthorized Exception on incompatible profile id', async () => {
     // given
 
     // when
-    const unpaidJobs = await supertest(app).get('/admin/best-profession').set('profile_id', '10');
+    const bestProfession = await supertest(app).get('/admin/best-profession').set('profile_id', '10');
 
     // then
-    expect(unpaidJobs.status).toBe(401)
+    expect(bestProfession.status).toBe(401)
   });
 
   it('should find best profession', async () => {
@@ -355,11 +351,11 @@ describe("Profiles /admin/best-profession", () => {
     const end = '2020-08-30T23:11:26.737Z';
 
     // when
-    const bestProfessions = await supertest(app).get('/admin/best-profession')
+    const bestProfession = await supertest(app).get('/admin/best-profession')
                                                 .set('profile_id', '2').query({ start, end });
     // then 
-    expect(bestProfessions.status).toBe(200);
-    expect(bestProfessions.text).toBe(JSON.stringify({"best-profession":"Programmer"}))
+    expect(bestProfession.status).toBe(200);
+    expect(bestProfession.text).toBe(JSON.stringify({"best-profession":"Programmer"}))
   });
 
   it('should throw 400 if date is invalid', async () => {
@@ -368,10 +364,10 @@ describe("Profiles /admin/best-profession", () => {
     const end = '2020-08-30T23:11:26.737Z';
 
     // when
-    const bestProfessions = await supertest(app).get('/admin/best-profession')
+    const bestProfession = await supertest(app).get('/admin/best-profession')
                                                 .set('profile_id', '2').query({ start, end });
     // then 
-    expect(bestProfessions.status).toBe(400);
+    expect(bestProfession.status).toBe(400);
   });
 
   it('should throw 400 if start date earlier than end date', async () => {
@@ -380,10 +376,83 @@ describe("Profiles /admin/best-profession", () => {
     const end = '2020-08-15T19:99:26.737Z'; 
 
     // when
-    const bestProfessions = await supertest(app).get('/admin/best-profession')
+    const bestProfession = await supertest(app).get('/admin/best-profession')
                                                 .set('profile_id', '2').query({ start, end });
     // then 
-    expect(bestProfessions.status).toBe(400);
+    expect(bestProfession.status).toBe(400);
   });
 
+})
+
+
+
+
+describe("Profiles /admin/best-clients", () => {
+  beforeEach(async () => {
+    await Profile.sync({ force: true });
+    await Contract.sync({ force: true });
+    await Job.sync({ force: true });
+    await fillTheDb2();
+  });
+
+  afterEach(async () => { });
+
+  it('should throw Unauthorized Exception on missing profile id', async () => {
+    // given
+
+    // when
+    const bestClients = await supertest(app).get('/admin/best-clients');
+
+    // then
+    expect(bestClients.status).toBe(401)
+  });
+
+  it('should throw Unauthorized Exception on incompatible profile id', async () => {
+    // given
+
+    // when
+    const bestClients = await supertest(app).get('/admin/best-clients').set('profile_id', '10');
+
+    // then
+    expect(bestClients.status).toBe(401)
+  });
+
+  it('should find best clients', async () => {
+    // given
+    const start = '2020-08-15T19:10:26.737Z';
+    const end = '2020-08-30T23:11:26.737Z';
+
+    // when
+    const bestClients = await supertest(app).get('/admin/best-clients')
+                                                .set('profile_id', '2').query({ start, end });
+    // then 
+    const expected = [{"id": 4, "fullName": "Ash Kethcum", "paid": 2020},
+                      {"id": 1, "fullName": "Harry Potter", "paid": 421}];
+    expect(bestClients.status).toBe(200);
+    expect(bestClients.text).toBe(JSON.stringify(expected))
+  });
+
+  it('should throw 400 if date is invalid', async () => {
+    // given
+    const start = '2020-08-15T19:99:26.737Z'; // invalid date
+    const end = '2020-08-30T23:11:26.737Z';
+
+    // when
+    const bestClients = await supertest(app).get('/admin/best-clients')
+                                                .set('profile_id', '2').query({ start, end });
+    // then 
+    expect(bestClients.status).toBe(400);
+  });
+
+  it('should throw 400 if start date earlier than end date', async () => {
+    // given
+    const start = '2020-08-30T23:11:26.737Z';
+    const end = '2020-08-15T19:99:26.737Z'; 
+
+    // when
+    const bestClients = await supertest(app).get('/admin/best-clients')
+                                                .set('profile_id', '2').query({ start, end });
+    // then 
+    expect(bestClients.status).toBe(400);
+  });
 })

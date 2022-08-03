@@ -105,20 +105,20 @@ describe("Jobs /jobs/:job_id/pay", () => {
     // given
 
     // when
-    const unpaidJobs = await supertest(app).post('/jobs/4/pay');
+    const result = await supertest(app).post('/jobs/4/pay');
 
     // then
-    expect(unpaidJobs.status).toBe(401)
+    expect(result.status).toBe(401)
   });
 
   it('should throw Unauthorized Exception on incompatible profile id', async () => {
     // given
 
     // when
-    const unpaidJobs = await supertest(app).post('/jobs/4/pay').set('profile_id', '10');
+    const result = await supertest(app).post('/jobs/4/pay').set('profile_id', '10');
 
     // then
-    expect(unpaidJobs.status).toBe(401)
+    expect(result.status).toBe(401)
   });
 
   it('should return correct unpaid jobs object if everything passed truly', async () => {
@@ -129,14 +129,13 @@ describe("Jobs /jobs/:job_id/pay", () => {
     const job = await Job.findByPk(jobId);
 
     // when
-    const unpaidJobs = await supertest(app).post(`/jobs/${jobId}/pay`).set('profile_id', '2');
+    const result = await supertest(app).post(`/jobs/${jobId}/pay`).set('profile_id', '2');
 
     // then
     const clientBalanceAfterPayment = await Profile.findByPk(2);
     const contractorBalanceAfterPayment = await Profile.findByPk(6);
 
-    
-    expect(unpaidJobs.status).toBe(200)
+    expect(result.status).toBe(200)
     expect(clientBalanceBeforePayment.balance - job.price).toBe(clientBalanceAfterPayment.balance)
     expect(contractorBalanceBeforePayment.balance + job.price).toBe(contractorBalanceAfterPayment.balance)
   });
@@ -146,9 +145,9 @@ describe("Jobs /jobs/:job_id/pay", () => {
     await Job.drop();
 
     // when
-    const unpaidJobs = await supertest(app).post('/jobs/4/pay').set('profile_id', '6');
+    const result = await supertest(app).post('/jobs/4/pay').set('profile_id', '6');
 
     // then
-    expect(unpaidJobs.status).toBe(500)
+    expect(result.status).toBe(500)
   });
 })

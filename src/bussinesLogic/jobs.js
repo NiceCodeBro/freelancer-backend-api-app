@@ -1,5 +1,5 @@
 
-const {JobAccess} = require('../dataLayer/jobAccess');
+const { JobAccess } = require('../dataLayer/jobAccess');
 
 async function getUnpaidActiveJobs(clientOrContractorId) {
   return await JobAccess.getUnpaidActiveJobs(clientOrContractorId);

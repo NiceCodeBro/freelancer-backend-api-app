@@ -2,6 +2,7 @@
 const { profileFKs, Job, Contract, contractStatus } = require('../model');
 const { Op } = require('sequelize');
 const {sequelize} = require('../model')
+const {Exceptions} = require('../exceptions')
 const {ProfileAccess} = require('./profileAccess')
 
 class JobAccess {
@@ -24,7 +25,7 @@ class JobAccess {
       if (decResult) { // it is ok, and increment can be done
         await ProfileAccess.incrementBalance(job.price, job.Contract.ContractorId, t)
       } else {
-        throw Error('Insufficent balance')
+        throw Error(Exceptions.InsufficentBalanceException)
       }
     })
   }

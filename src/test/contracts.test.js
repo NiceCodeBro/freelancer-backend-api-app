@@ -43,10 +43,10 @@ describe("Contracts /contracts/:id", () => {
     // given
 
     // when
-    const contract = await supertest(app).get('/contracts/7');
+    const result = await supertest(app).get('/contracts/7');
 
     // then
-    expect(contract.status).toBe(401)
+    expect(result.status).toBe(401)
 
   });
 
@@ -54,17 +54,17 @@ describe("Contracts /contracts/:id", () => {
     // given
 
     // when
-    const contract = await supertest(app).get('/contracts/5').set('profile_id', '10');
+    const result = await supertest(app).get('/contracts/5').set('profile_id', '10');
 
     // then
-    expect(contract.status).toBe(401)
+    expect(result.status).toBe(401)
   });
 
   it('should return correct contract object if everything passed truly', async () => {
     // given
 
     // when
-    const contract = await supertest(app).get('/contracts/12').set('profile_id', '5');
+    const result = await supertest(app).get('/contracts/12').set('profile_id', '5');
 
     // then
     const expected = {
@@ -74,8 +74,8 @@ describe("Contracts /contracts/:id", () => {
       "ContractorId": 7,
       "ClientId": 5
     };
-    expect(contract.status).toBe(200)
-    expect(contract.text).toBe(JSON.stringify(expected))
+    expect(result.status).toBe(200)
+    expect(result.text).toBe(JSON.stringify(expected))
   });
 
   it('should return status code 500 if there is a problem with database', async () => {
@@ -83,10 +83,10 @@ describe("Contracts /contracts/:id", () => {
     await Contract.drop();
 
     // when
-    const contract = await supertest(app).get('/contracts/5').set('profile_id', '5');
+    const result = await supertest(app).get('/contracts/5').set('profile_id', '5');
 
     // then
-    expect(contract.status).toBe(500)
+    expect(result.status).toBe(500)
   });
 })
 
@@ -103,10 +103,10 @@ describe("Contracts /contracts", () => {
     // given
 
     // when
-    const contract = await supertest(app).get('/contracts');
+    const result = await supertest(app).get('/contracts');
 
     // then
-    expect(contract.status).toBe(401)
+    expect(result.status).toBe(401)
 
   });
 
@@ -114,17 +114,17 @@ describe("Contracts /contracts", () => {
     // given
 
     // when
-    const contract = await supertest(app).get('/contracts').set('profile_id', '10');
+    const result = await supertest(app).get('/contracts').set('profile_id', '10');
 
     // then
-    expect(contract.status).toBe(401)
+    expect(result.status).toBe(401)
   });
 
   it('should return correct contract object if everything passed truly', async () => {
     // given
 
     // when
-    const contract = await supertest(app).get('/contracts').set('profile_id', '5');
+    const result = await supertest(app).get('/contracts').set('profile_id', '5');
 
     // then
     const expected = [{
@@ -134,8 +134,8 @@ describe("Contracts /contracts", () => {
       "ContractorId": 7,
       "ClientId": 5
     }];
-    expect(contract.status).toBe(200)
-    expect(contract.text).toBe(JSON.stringify(expected))
+    expect(result.status).toBe(200)
+    expect(result.text).toBe(JSON.stringify(expected))
   });
 
   it('should return status code 500 if there is a problem with database', async () => {
@@ -143,10 +143,10 @@ describe("Contracts /contracts", () => {
     await Contract.drop();
 
     // when
-    const contract = await supertest(app).get('/contracts').set('profile_id', '5');
+    const result = await supertest(app).get('/contracts').set('profile_id', '5');
 
     // then
-    expect(contract.status).toBe(500)
+    expect(result.status).toBe(500)
   });
 
 })

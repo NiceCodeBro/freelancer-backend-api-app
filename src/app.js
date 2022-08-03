@@ -1,11 +1,11 @@
 const express = require('express');
 const bodyParser = require('body-parser');
-const {sequelize} = require('./model')
-const {getProfile} = require('./middleware/getProfile')
-const {getContractBelogsToProfile, getAllContractsBelongsToProfile} = require('./bussinesLogic/contracts')
-const {getUnpaidActiveJobs, payForJob} = require('./bussinesLogic/jobs')
-const {depositMoneyToClient, getBestProfession} = require('./bussinesLogic/profiles')
-const { Op } = require('sequelize');
+const { sequelize } = require('./model')
+const { getProfile } = require('./middleware/getProfile')
+const { getContractBelogsToProfile, getAllContractsBelongsToProfile } = require('./bussinesLogic/contracts')
+const { getUnpaidActiveJobs, payForJob } = require('./bussinesLogic/jobs')
+const { depositMoneyToClient, getBestProfession, getBestClients } = require('./bussinesLogic/profiles')
+const { Exceptions } = require('./exceptions')
 
 const app = express();
 app.use(bodyParser.json());
@@ -69,7 +69,7 @@ app.post('/jobs/:job_id/pay', getProfile, async (req, res) =>{
         await payForJob(job_id);
         res.status(200).end();
       } catch (error) {
-        if (error.message === 'Insufficent balance') return res.status(422).end(); //Unprocessable Entity
+        if (error.message === Exceptions.InsufficentBalanceException) return res.status(422).end(); //Unprocessable Entity
         return res.status(500).end();
     }
 })
@@ -86,8 +86,8 @@ app.post('/balances/deposit/:userId', getProfile, async (req, res) =>{
       await depositMoneyToClient(userId, amount);
       res.status(200).end();
     } catch (error) {
-      if (error.message === 'Client does not exist') return res.status(404).end();
-      else if (error.message === 'Threshold problem') return res.status(422).end();
+      if (error.message === Exceptions.ClientDoesNotExistException) return res.status(404).end();
+      else if (error.message === Exceptions.ThresholdExceedException) return res.status(422).end();
       else return res.status(404).end();
     }
 })
@@ -103,57 +103,30 @@ app.get('/admin/best-profession', getProfile ,async (req, res) =>{
       const bestProfession = await getBestProfession(startedDate, endDate);
       res.json({'best-profession': bestProfession});
     }catch(error) {
-        if (error.message === 'Start or enddate is not valid' || 
-            error.message === 'Start date must be earlier than end') 
-              return res.status(400).end();
-        return res.status(404).end()
+      if (error.message === Exceptions.StartDateEndDateMismatchException || 
+          error.message === Exceptions.StartOrEndDateIsNotValidException) 
+          return res.status(400).end();
+      return res.status(404).end()
     }
 })
 
+
+/**
+ *  returns the clients the paid the most for jobs in the query time period. 
+ *   limit query parameter should be applied, default limit is 2.
+ */
 app.get('/admin/best-clients', getProfile ,async (req, res) =>{
-    const {Contract, Job, Profile} = req.app.get('models')
-    const startedDate = req.query.start; //new Date("2020-08-15T19:12:26.737Z");
-    const endDate = req.query.end; //  new Date("2020-08-30T23:11:26.737Z");
+    const startedDate = req.query.start; 
+    const endDate = req.query.end;
     const limit = req.query.limit || 2
     try {
-        const bestClients = await Job.findAll({
-            group: "Contract.Client.id",
-            limit,
-            attributes: [[sequelize.fn('sum', sequelize.col('price')), 'total']],
-            order: [[sequelize.literal('total'), 'DESC']],
-            where: { paid: true, paymentDate: {
-                [Op.between] : [startedDate , endDate]
-            } },
-            include: [{
-              model: Contract,
-              required: true,
-              where: {},
-              attributes: { exclude: ['id', 'terms', 'status', 'createdAt', 'updatedAt', 'ClientId']},
-              include: [{
-                model: Profile,
-                as: 'Client',
-                required: true,
-                attributes: ['firstName', 'lastName', 'id']
-              }]
-            }]
-          })
-          let result;
-          if (bestClients && bestClients.length > 0) {
-            result = bestClients.map((client) => {
-                return {
-                    id: client.Contract.Client.id,
-                    fullName: client.Contract.Client.firstName + ' ' + client.Contract.Client.lastName,
-                    paid: client.dataValues.total
-                }
-            })
-          }
-        if (bestClients && bestClients.length > 0) {
-            res.json(result)
-        }
-        return res.status(404).end()
+        const bestClients = await getBestClients(startedDate, endDate, limit); 
+        res.json(bestClients)
     }catch(error) {
-        console.log('Error', error)
-        return res.status(404).end()
+      if (error.message === Exceptions.StartDateEndDateMismatchException || 
+          error.message === Exceptions.StartOrEndDateIsNotValidException) 
+          return res.status(400).end();
+      return res.status(404).end()
     }
 })
 
