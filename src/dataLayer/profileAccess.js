@@ -20,27 +20,33 @@ class ProfileAccess {
 
   static async getClientById(profileId, transactionObject) {
     const where = { id: profileId, type: 'client'};
-    return await Profile.findOne({where}, {lock: true, transaction: transactionObject});
+    const client =  await Profile.findOne({where}, {lock: true, transaction: transactionObject});
+    if (!client) throw Error(Exceptions.ClientDoesNotExistException);
+    return client;
   }
 
   static async updateClientBalance(client, amount, transactionObject) {
-    const { calculateNewBalance } = require('../bussinesLogic/profiles'); 
-    client.balance = calculateNewBalance(amount, client.balance);
+    client.balance = (parseFloat(amount) + parseFloat(client.balance)).toFixed(2);
     await client.save({ transaction: transactionObject});
   } 
 
-  static async depositMoneyToClient(cliendId, amount) {
-    const { JobAccess } = require('./jobAccess')
-    const { isAmountUnderTheThreshold } = require('../bussinesLogic/profiles'); 
-
+  static async depositMoneyToClient(clientId, amount) {
     await sequelize.transaction(async(t) => {
-      const client = await ProfileAccess.getClientById(cliendId, t);
-      if (!client) throw Error(Exceptions.ClientDoesNotExistException);
-
-      const jobSum = await JobAccess.getTotalPriceForUnpaidJobs(cliendId,t);
-      if (!jobSum || !isAmountUnderTheThreshold(amount, jobSum)) throw Error(Exceptions.ThresholdExceedException);
-      else await ProfileAccess.updateClientBalance(client, amount, t);
+      const client = await ProfileAccess.getClientById(clientId, t); // if does not exist, throws exception
+      await ProfileAccess.checkIfJobSumUnderThreshold(clientId, amount, t); // if not throws exception
+      await ProfileAccess.updateClientBalance(client, amount, t);
     })
+  }
+
+ static async checkIfJobSumUnderThreshold(cliendId,amount,  transactionObject) {
+    const { JobAccess } = require('./jobAccess')
+    const jobSum = await JobAccess.getTotalPriceForUnpaidJobs(cliendId, transactionObject);
+    if (!jobSum || !ProfileAccess.isAmountUnderTheThreshold(amount, jobSum)) throw Error(Exceptions.ThresholdExceedException);
+  } 
+
+  static isAmountUnderTheThreshold(amount, jobSum) {
+    const treshold = 0.25;
+    return parseFloat(amount) <= jobSum * treshold;
   }
 
   static async getBestProfession(startedDate, endDate) {
